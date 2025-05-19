@@ -8,6 +8,7 @@ build:
 python:
   install:
     - method: flit
+      path: .                
       extra_requirements:
         - docs
 
