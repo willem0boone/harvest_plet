@@ -1,0 +1,62 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "identifier": "{id of the GitHub repo (can be DOI)}",
+  "description": "tbd",
+  "name": "harvest_plet",
+  "codeRepository": "https://github.com/willem0boone/harvest_plet",
+  "issueTracker": "TBD",
+  "license": "MIT License",
+  "version": "0.0.1",
+  "datePublished": "2025-05",
+  "dateModified": "2025-05",
+  "programmingLanguage": [
+    {
+      "@type": "ComputerLanguage",
+      "name": "Python",
+      "url": "https://www.python.org/"
+    }
+  ],
+  "operatingSystem": "Windows 11",
+  "runtimePlatform": ["Python 3.12.1"],
+  "provider": {
+    "@id": "https://ror.org/0496vr396",
+    "@type": "Organization",
+    "name": "Flanders Marine Institute",
+    "url": "https://vliz.be/en"
+  },
+  "contributor": [
+    {
+      "@type": "Person",
+      "givenName": "Willem",
+      "familyName": "Boone",
+      "email": "willem.boone@vliz.be",
+      "@id": "https://orcid.org/0009-0008-0916-6847",
+      "orcid": "https://orcid.org/0009-0008-0916-6847"
+    }
+  ],
+  "copyrightHolder": [
+    {
+      "@type": "Person",
+      "givenName": "Willem",
+      "familyName": "Boone",
+      "email": "willem.boone@vliz.be",
+      "@id": "https://orcid.org/0009-0008-0916-6847",
+      "orcid": "https://orcid.org/0009-0008-0916-6847"
+    }
+  ],
+  "maintainer": [
+    {
+      "@type": "Person",
+      "givenName": "Willem",
+      "familyName": "Boone",
+      "email": "willem.boone@vliz.be",
+      "@id": "https://orcid.org/0009-0008-0916-6847",
+      "orcid": "https://orcid.org/0009-0008-0916-6847"
+    }
+  ],
+  "softwareRequirements": {
+      },
+  "keywords": ["PLET", "harvest"],
+  "readme": "NAN"
+}

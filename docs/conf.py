@@ -3,8 +3,8 @@ import json
 
 # -- Project information
 
-project = 'Resampling datasets'
-copyright = '2024, Willem Boone'
+project = 'Harvest Plet'
+copyright = '2025, Willem Boone'
 author = 'Willem Boone'
 
 
