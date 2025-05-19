@@ -27,6 +27,7 @@ def extract_version_from_file(file_path):
         return f"An unexpected error occurred: {e}"
 
 
+
 # release = '0.1'
 # version = '0.1.0'
 
@@ -64,7 +65,7 @@ epub_show_urls = 'footnote'
 html_context = {
     "display_github": True, # Integrate GitHub
     "github_user": "willem0boone", # Username
-    "github_repo": "Edito_resampling_datasets", # Repo name
+    "github_repo": "harvest_plet", # Repo name
     "github_version": "master", # Version
     "conf_py_path": "/docs/source/", # Path in the checkout to the docs root
 }
