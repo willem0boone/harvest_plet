@@ -16,10 +16,13 @@ def get_dataset_names() -> list:
     response = requests.get("https://www.dassh.ac.uk/lifeforms/")
     html = response.text
     soup = BeautifulSoup(html, 'html.parser')
-    select_element = soup.find("select", {"id": "abundance_dataset"})
+    select_element = soup.find(
+        "select", {"id": "abundance_dataset"})
 
     if select_element:
-        options = [option.text.strip() for option in select_element.find_all("option") if option.get("value") != ""]
+        options = [
+            option.text.strip() for option in select_element.find_all("option")
+            if option.get("value") != ""]
         return options
     else:
         print("Select element not found.")
@@ -37,9 +40,8 @@ def encode_dataset_name(name: str) -> str:
     return urllib.parse.quote(name)
 
 
-# if __name__ == "__main__":
-#     datasets = get_dataset_names()
-#     print(datasets)
-#
-#     dataset_enc = list(map(encode_dataset_name, datasets))
-#     print(dataset_enc)
+if __name__ == "__main__":
+    datasets = get_dataset_names()
+    print(datasets)
+
+
