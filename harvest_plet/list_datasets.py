@@ -40,8 +40,8 @@ def encode_dataset_name(name: str) -> str:
     return urllib.parse.quote(name)
 
 
-if __name__ == "__main__":
-    datasets = get_dataset_names()
-    print(datasets)
+# if __name__ == "__main__":
+#     datasets = get_dataset_names()
+#     print(datasets)
 
 
