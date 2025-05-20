@@ -10,15 +10,6 @@ list_datasets
    :show-inheritance:
 
 
-list_datasets
------------------------------
-
-.. automodule:: harvest_plet.list_datasets
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
 harvest_dataset
 -----------------------------
 
