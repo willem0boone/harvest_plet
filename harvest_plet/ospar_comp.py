@@ -69,7 +69,7 @@ class OSPARRegions:
         :param id: The feature ID to search for.
         :type id: str
         :param simplify: Whether to simplify the geometry to reduce WKT length.
-        When using the wkt in URL requests, a too long URL causes error 414.
+            When using the wkt in URL requests, a too long URL causes error414.
         :type simplify: bool
         :return: The WKT representation of the geometry, or None if not found.
         :rtype: Optional[str]
