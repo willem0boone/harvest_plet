@@ -1,28 +1,27 @@
 API
 ==================
 
-list_datasets
+PLETHarvester
 -----------------------------
 
-.. automodule:: harvest_plet.list_datasets
+.. automodule:: harvest_plet.plet
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+OSPARRegions
+-----------------------------
+
+.. automodule:: harvest_plet.ospar_comp
    :members:
    :undoc-members:
    :show-inheritance:
 
 
-harvest_dataset
+harvest_for_assessment
 -----------------------------
 
-.. automodule:: harvest_plet.harvest_dataset
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-harvest_all
------------------------------
-
-.. automodule:: harvest_plet.harvest_all
+.. automodule:: harvest_plet.harvest_for_assessment
    :members:
    :undoc-members:
    :show-inheritance:
