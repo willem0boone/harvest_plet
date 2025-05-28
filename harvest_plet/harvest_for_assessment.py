@@ -1,6 +1,6 @@
 import yaml
 from datetime import date
-from harvest_plet.opsar_comp import OSPARRegions
+from harvest_plet.ospar_comp import OSPARRegions
 from harvest_plet.plet import PLETHarvester
 
 
