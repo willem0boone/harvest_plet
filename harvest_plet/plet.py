@@ -3,12 +3,11 @@ import re
 import csv
 import io
 import time
-import urllib.parse
-import datetime
-from typing import List, Union, Optional, Dict
-from datetime import date
-
 import requests
+from typing import List
+from typing import Union
+from typing import Dict
+from datetime import date
 from bs4 import BeautifulSoup
 from shapely import wkt as wkt_loader
 

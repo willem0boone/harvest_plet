@@ -9,6 +9,7 @@ dynamic = ["version", "description"]
 
 # Regular PyPI dependencies
 dependencies = [
+    "PyYAML",
     "geopandas",
     "contextily",
     "shapely",

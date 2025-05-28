@@ -63,7 +63,6 @@ class OSPARRegions:
     def get_wkt(self, id: str, simplify: bool = False) -> Optional[str]:
         """
         Return the WKT geometry for a feature with the given ID.
-
         Optionally simplifies the geometry to ensure the WKT string length
         stays below 100,000 characters.
 

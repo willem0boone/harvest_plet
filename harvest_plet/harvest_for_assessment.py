@@ -1,4 +1,6 @@
 import yaml
+from typing import Dict
+from typing import List
 from datetime import date
 from harvest_plet.ospar_comp import OSPARRegions
 from harvest_plet.plet import PLETHarvester

@@ -17,7 +17,6 @@ OSPARRegions
    :undoc-members:
    :show-inheritance:
 
-
 harvest_for_assessment
 -----------------------------
 
