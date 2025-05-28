@@ -9,7 +9,7 @@ dynamic = ["version", "description"]
 
 # Regular PyPI dependencies
 dependencies = [
-    "cartopy",
+    "staticmap",
     "PyYAML",
     "contextily",
     "requests == 2.31.0",

@@ -2,12 +2,11 @@ import os
 import requests
 from typing import List
 from typing import Optional
+from staticmap import Polygon
+from staticmap import StaticMap
 import matplotlib.pyplot as plt
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
-
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 
 
 class OSPARRegions:
@@ -84,71 +83,62 @@ class OSPARRegions:
             filename = "full_dataset.png"
             title = "OSPAR Regions"
 
-        # Create a cartopy GeoAxes with PlateCarree projection (lon/lat)
-        fig = plt.figure(figsize=(10, 10))
-        ax = plt.axes(projection=ccrs.PlateCarree())
-        ax.set_title(title)
+        m = StaticMap(800, 800)
 
-        # Add basic cartopy features for basemap
-        ax.add_feature(cfeature.LAND, facecolor='lightgray')
-        ax.add_feature(cfeature.OCEAN, facecolor='lightblue')
-        ax.add_feature(cfeature.COASTLINE)
-        ax.add_feature(cfeature.BORDERS, linestyle=':')
-        ax.gridlines(draw_labels=True, dms=True, x_inline=False,
-                     y_inline=False)
-
-        # Plot geometries on the map
         for feature in features:
             geom = shape(feature["geometry"])
+
+            def coords_to_tuples(geom):
+                if geom.geom_type == "Polygon":
+                    return [(x, y) for x, y in geom.exterior.coords]
+                elif geom.geom_type == "MultiPolygon":
+                    # Return list of rings for each polygon part
+                    return [
+                        [(x, y) for x, y in poly.exterior.coords]
+                        for poly in geom.geoms
+                    ]
+                else:
+                    return []
+
+            coords = coords_to_tuples(geom)
+
             if geom.geom_type == "Polygon":
-                x, y = geom.exterior.xy
-                ax.fill(x, y, facecolor="r", edgecolor="black",
-                        alpha=0.6,
-                        transform=ccrs.PlateCarree())
+                polygon = Polygon(coords,
+                                  fill_color='#FF000080',
+                                  outline_color='#FF0000')
+                m.add_polygon(polygon)
             elif geom.geom_type == "MultiPolygon":
-                for poly in geom.geoms:
-                    x, y = poly.exterior.xy
-                    ax.fill(x, y, facecolor="r", edgecolor="black",
-                            alpha=0.6,
-                            transform=ccrs.PlateCarree())
+                for poly_coords in coords:
+                    polygon = Polygon(poly_coords,
+                                      fill_color='#FF000080',
+                                      outline_color='#FF0000')
+                    m.add_polygon(polygon)
 
-        # Set map extent to the bounds of all features plotted
-        all_coords = []
-        for feature in features:
-            geom = shape(feature["geometry"])
-            all_coords.extend(
-                list(geom.exterior.coords) if geom.geom_type == "Polygon" else
-                [pt for poly in geom.geoms for pt in poly.exterior.coords])
-        if all_coords:
-            xs, ys = zip(*all_coords)
-            buffer = 0.5  # degree buffer around features
-            ax.set_extent([min(xs) - buffer, max(xs) + buffer,
-                           min(ys) - buffer, max(ys) + buffer],
-                          crs=ccrs.PlateCarree())
+        # Render map to PIL image
+        image = m.render()
 
-        saved = False
+        # Save or show the image
         if output_dir:
             try:
                 os.makedirs(output_dir, exist_ok=True)
                 file_path = os.path.join(output_dir, filename)
-                plt.savefig(file_path, bbox_inches="tight")
-                saved = True
+                image.save(file_path)
+                print(f"Saved map image to {file_path}")
             except Exception as e:
                 print(
-                    f"Warning: Could not save plot to '{output_dir}'. Error: {e}")
+                    f"Warning: Could not save plot to '{output_dir}'. "
+                    f"Error: {e}")
 
         if show:
+            # Display image with matplotlib
+            plt.imshow(image)
+            plt.axis('off')
+            plt.title(title)
             plt.show()
-        elif not saved:
-            print(
-                "Warning: 'show' is False and no valid 'output_dir' provided. "
-                "Plot was not saved or displayed.")
-
-        plt.close()
 
 
 # if __name__ == "__main__":
 #     comp_regions = OSPARRegions()
-#     comp_regions.plot_map()
+#     comp_regions.plot_map("SNS")
 
 
