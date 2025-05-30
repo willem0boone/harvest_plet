@@ -40,19 +40,24 @@ class PLETHarvester:
         :rtype: List[str]
         """
         response = self.session.get(self.SITE_URL)
-        html = response.text
-        soup = BeautifulSoup(html, 'html.parser')
+        response.encoding = response.apparent_encoding  # Fix encoding issues
+        soup = BeautifulSoup(response.text, 'html.parser')
+
         select_element = soup.find("select",
                                    {"id": "abundance_dataset"})
-
         if not select_element:
             print("Select element not found.")
             return []
 
-        return [
-            option.text.strip() for option in select_element.find_all("option")
-            if option.get("value")
+        options = [
+            option.text.strip()
+            for option in select_element.find_all("option")
+            if
+            option.text.strip()
+            and "select a dataset"
+            not in option.text.lower()
         ]
+        return options
 
     def harvest_dataset(
         self,
@@ -65,7 +70,8 @@ class PLETHarvester:
         timeout: float = 600.0
     ) -> str:
         """
-        Download dataset from DASSH API for a given time range and spatial region.
+        Download dataset from DASSH API for a given time range and spatial
+        region.
 
         :param start_date: Start date of query.
         :type start_date: date
@@ -108,14 +114,17 @@ class PLETHarvester:
 
         for attempt in range(1, retries + 1):
             try:
-                response = self.session.get(self.BASE_URL, params=params, timeout=timeout)
+                response = self.session.get(self.BASE_URL,
+                                            params=params,
+                                            timeout=timeout)
                 # print(f"Request URL: {response.url}")
                 response.raise_for_status()
                 return response.text
             except requests.RequestException as e:
                 print(f"[Attempt {attempt}] Request failed: {e}")
                 if attempt == retries:
-                    raise RuntimeError(f"Request failed after {retries} attempts: {e}")
+                    raise RuntimeError(f"Request failed after {retries} "
+                                       f"attempts: {e}")
                 sleep_time = backoff_factor * (2 ** (attempt - 1))
                 print(f"Retrying in {sleep_time:.1f} seconds...")
                 time.sleep(sleep_time)
@@ -133,7 +142,8 @@ class PLETHarvester:
         timeout: float = 600.0
     ) -> None:
         """
-        Harvest dataset and write output to a CSV file in the specified directory.
+        Harvest dataset and write output to a CSV file in the specified
+        directory.
 
         :param start_date: Start of the time range.
         :type start_date: date
@@ -276,4 +286,9 @@ class PLETHarvester:
         print(f"CSV written to {output_file}")
 
 
+if __name__ == "__main__":
+    plet_harvester = PLETHarvester()
 
+    # test dateset names
+    dataset_names = plet_harvester.get_dataset_names()
+    print(dataset_names)

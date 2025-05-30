@@ -137,8 +137,12 @@ class OSPARRegions:
             plt.show()
 
 
-# if __name__ == "__main__":
-#     comp_regions = OSPARRegions()
-#     comp_regions.plot_map("SNS")
+if __name__ == "__main__":
+    comp_regions = OSPARRegions()
+    comp_regions.plot_map("SNS")
+    id_list = comp_regions.get_all_ids()
+    for item in id_list:
+        print(item)
+
 
 
