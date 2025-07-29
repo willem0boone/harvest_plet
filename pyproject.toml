@@ -5,20 +5,11 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "harvest_plet"
 authors = [{name = "Willem Boone", email = "willem.boone@vliz.be"}]
-dynamic = ["version", "description"]
+dynamic = ["version", "description", "dependencies"]
 
 # Regular PyPI dependencies
-dependencies = [
-    "matplotlib",
-    "staticmap",
-    "PyYAML",
-    "requests",
-    "beautifulsoup4",
-    "urllib3",
-    "shapely",
-    "sphinx == 7.1.2",
-    "sphinx-rtd-theme == 1.3.0rc1"
-]
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
 
 [project.optional-dependencies]
 docs = [
