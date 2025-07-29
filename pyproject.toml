@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "harvest_plet"
+version = "0.1.0"
 authors = [{name = "Willem Boone", email = "willem.boone@vliz.be"}]
 dynamic = ["dependencies"]
 
