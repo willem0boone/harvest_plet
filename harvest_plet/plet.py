@@ -4,9 +4,11 @@ import csv
 import io
 import time
 import requests
+import warnings
 from typing import List
-from typing import Union
 from typing import Dict
+from typing import Union
+from typing import Optional
 from datetime import date
 from bs4 import BeautifulSoup
 from shapely import wkt as wkt_loader
@@ -59,40 +61,36 @@ class PLETHarvester:
         ]
         return options
 
-    def harvest_dataset(
-        self,
-        start_date: date,
-        end_date: date,
-        wkt: str,
-        dataset_name: str,
-        retries: int = 3,
-        backoff_factor: float = 60.0,
-        timeout: float = 600.0
-    ) -> str:
+    def harvest_data(
+            self,
+            start_date: date,
+            end_date: date,
+            wkt: str,
+            dataset_name: str,
+            csv: bool = False,
+            out_dir: Optional[str] = None,
+            name: Optional[str] = None,
+            retries: int = 3,
+            backoff_factor: float = 60.0,
+            timeout: float = 600.0
+    ) -> Optional[str]:
         """
-        Download dataset from DASSH API for a given time range and spatial
-        region.
+        Harvest dataset from DASSH API for a given time range and spatial region.
+        Optionally write output to a CSV file.
 
         :param start_date: Start date of query.
-        :type start_date: date
         :param end_date: End date of query.
-        :type end_date: date
         :param wkt: WKT string representing the polygon region.
-        :type wkt: str
         :param dataset_name: Dataset name to retrieve.
-        :type dataset_name: str
+        :param csv: If True, save as CSV file. If False, return as string.
+        :param out_dir: Directory to save the CSV file (required if csv=True).
+        :param name: Name of the CSV file (required if csv=True).
         :param retries: Number of retry attempts on failure.
-        :type retries: int
         :param backoff_factor: Backoff multiplier for retry wait time.
-        :type backoff_factor: float
         :param timeout: Request timeout in seconds.
-        :type timeout: float
-
-        :returns: CSV content as a string.
-        :rtype: str
-
-        :raises ValueError: If inputs are invalid.
-        :raises RuntimeError: If all retry attempts fail.
+        :returns: CSV string if csv=False, otherwise None.
+        :raises ValueError: For invalid inputs.
+        :raises RuntimeError: If request fails after all retries.
         """
         if end_date <= start_date:
             raise ValueError("end_date must be after start_date")
@@ -114,77 +112,38 @@ class PLETHarvester:
 
         for attempt in range(1, retries + 1):
             try:
-                response = self.session.get(self.BASE_URL,
-                                            params=params,
+                response = self.session.get(self.BASE_URL, params=params,
                                             timeout=timeout)
-                # print(f"Request URL: {response.url}")
                 response.raise_for_status()
-                return response.text
+                csv_data = response.text
+
+                if "<h2>" in csv_data and "Error:" in csv_data:
+                    warnings.warn(
+                        "API returned an error page instead of data: "
+                        "likely no samples found for the given parameters.",
+                        RuntimeWarning
+                    )
+
+                if csv:
+                    if not out_dir or not name:
+                        raise ValueError(
+                            "out_dir and name must be provided when csv=True")
+                    os.makedirs(out_dir, exist_ok=True)
+                    clean_name = self._sanitize_path_name(name)
+                    dest_path = os.path.join(out_dir, f"{clean_name}.csv")
+                    self._write_csv_from_string(csv_data, dest_path)
+                    return None
+                else:
+                    return csv_data
+
             except requests.RequestException as e:
                 print(f"[Attempt {attempt}] Request failed: {e}")
                 if attempt == retries:
-                    raise RuntimeError(f"Request failed after {retries} "
-                                       f"attempts: {e}")
+                    raise RuntimeError(
+                        f"Request failed after {retries} attempts: {e}")
                 sleep_time = backoff_factor * (2 ** (attempt - 1))
                 print(f"Retrying in {sleep_time:.1f} seconds...")
                 time.sleep(sleep_time)
-
-    def harvest_as_csv(
-        self,
-        start_date: date,
-        end_date: date,
-        wkt: str,
-        dataset_name: str,
-        out_dir: str,
-        name: str,
-        retries: int = 3,
-        backoff_factor: float = 60.0,
-        timeout: float = 600.0
-    ) -> None:
-        """
-        Harvest dataset and write output to a CSV file in the specified
-        directory.
-
-        :param start_date: Start of the time range.
-        :type start_date: date
-        :param end_date: End of the time range.
-        :type end_date: date
-        :param wkt: WKT string representing spatial bounds.
-        :type wkt: str
-        :param dataset_name: Dataset name to query.
-        :type dataset_name: str
-        :param out_dir: Output directory to save the file.
-        :type out_dir: str
-        :param name: name of csv file to create.
-        :type name: str
-        :param retries: Number of retry attempts.
-        :type retries: int
-        :param backoff_factor: Retry backoff factor in seconds.
-        :type backoff_factor: float
-        :param timeout: Timeout in seconds for the request.
-        :type timeout: float
-
-        :returns: None
-        :rtype: None
-        """
-        os.makedirs(out_dir, exist_ok=True)
-        clean_name = self._sanitize_path_name(name)
-        dest_path = os.path.join(out_dir, f"{clean_name}.csv")
-
-        try:
-            csv_data = self.harvest_dataset(
-                start_date=start_date,
-                end_date=end_date,
-                wkt=wkt,
-                dataset_name=dataset_name,
-                retries=retries,
-                backoff_factor=backoff_factor,
-                timeout=timeout
-            )
-
-            self._write_csv_from_string(csv_data, dest_path)
-        except Exception as e:
-            print(f"Failed to harvest dataset '{dataset_name}': {e}")
 
     def _harvest_all_datasets(
         self,
@@ -197,25 +156,7 @@ class PLETHarvester:
         timeout: float = 600.0
     ) -> Dict[str, List[str]]:
         """
-        Harvest all available datasets over a given region and time period.
-
-        :param start_date: Start of the date range.
-        :type start_date: date
-        :param end_date: End of the date range.
-        :type end_date: date
-        :param wkt: WKT string for the spatial region.
-        :type wkt: str
-        :param out_dir: Output directory to save harvested CSV files.
-        :type out_dir: str
-        :param retries: Retry attempts for each dataset.
-        :type retries: int
-        :param backoff_factor: Time multiplier for retries.
-        :type backoff_factor: float
-        :param timeout: Request timeout in seconds.
-        :type timeout: float
-
-        :returns: Dictionary with 'succeeded' and 'failed' dataset name lists.
-        :rtype: Dict[str, List[str]]
+        old & depricated code
         """
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir, exist_ok=True)

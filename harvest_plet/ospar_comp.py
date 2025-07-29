@@ -14,12 +14,11 @@ class OSPARRegions:
     A class for fetching and handling OSPAR WFS component data.
     """
 
-    def __init__(self, url: str = "https://odims.ospar.org/geoserver/odims/wfs"
-                                  "?service=WFS&version=2.0.0"
-                                  "&request=GetFeature"
-                                  "&typeName=ospar_comp_au_2023_01_001"
-                                  "&outputFormat=application/json") -> None:
-        self.url = url
+    def __init__(self) -> None:
+        self.url = ("https://odims.ospar.org/geoserver/odims/wfs?service=WFS&"
+                    "version=2.0.0&request=GetFeature&"
+                    "typeName=ospar_comp_au_2023_01_001"
+                     "&outputFormat=application/json")
         self.data = self._get_json()
 
     def _get_json(self) -> dict:
@@ -43,6 +42,22 @@ class OSPARRegions:
         return None
 
     def get_wkt(self, id: str, simplify: bool = False) -> Optional[str]:
+        """
+        Retrieve the WKT (Well-Known Text) geometry string for a given feature
+        ID.
+
+        Optionally simplifies the geometry to reduce its size while preserving
+        topology. Simplification continues iteratively until the WKT length is
+        below 5000 characters or the tolerance reaches 1.0.
+
+        :param id: The unique identifier of the feature.
+        :type id: str
+        :param simplify: Whether to simplify the geometry before returning.
+        :type simplify: bool
+
+        :returns: The WKT string of the geometry, or None if not found.
+        :rtype: Optional[str]
+        """
         geometry = self._get_geometry(id)
         if not geometry:
             return None
@@ -59,6 +74,12 @@ class OSPARRegions:
         return geometry.wkt
 
     def get_all_ids(self) -> List[str]:
+        """
+        Get a list of all feature IDs in the dataset.
+
+        :returns: A list of feature IDs.
+        :rtype: List[str]
+        """
         return [
             feature["properties"].get("ID")
             for feature in self.data.get("features", [])
@@ -70,7 +91,23 @@ class OSPARRegions:
                  show: bool = True,
                  output_dir: Optional[str] = None
                  ) -> None:
+        """
+        Plot the geometry of a specific feature ID or all features on a map.
 
+        If an ID is provided, only that feature is plotted. Otherwise, all
+        features in the dataset are plotted.
+
+        :param id: Feature ID to plot. If None, plots all features.
+        :type id: Optional[str]
+        :param show: Whether to display the plot interactively.
+        :type show: bool
+        :param output_dir: Directory to save the plot image. If None, plot is
+            not saved.
+        :type output_dir: Optional[str]
+
+        :returns: None
+        :rtype: None
+        """
         features = self.data["features"]
 
         if id:
@@ -137,12 +174,12 @@ class OSPARRegions:
             plt.show()
 
 
-if __name__ == "__main__":
-    comp_regions = OSPARRegions()
-    comp_regions.plot_map("SNS")
-    id_list = comp_regions.get_all_ids()
-    for item in id_list:
-        print(item)
+# if __name__ == "__main__":
+#     comp_regions = OSPARRegions()
+#     comp_regions.plot_map("SNS")
+#     id_list = comp_regions.get_all_ids()
+#     for item in id_list:
+#         print(item)
 
 
 
