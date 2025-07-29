@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "harvest_plet"
 authors = [{name = "Willem Boone", email = "willem.boone@vliz.be"}]
-dynamic = ["version", "description", "dependencies"]
+dynamic = ["dependencies"]
 
 # Regular PyPI dependencies
 [tool.setuptools.dynamic]
