@@ -163,43 +163,18 @@ def harvest_for_assessment(start_date: date,
                 logging.error(f"   --- REGION {region_idx}/{len(region_ids)}: {region_id} --- [FAILED] Error: {e}")
 
 
-def to_parquet(
-    csv_dir: str,
-    out_path: Optional[str] = None,
-    use_s3: bool = False,
-    bucket: Optional[str] = None,
-    endpoint_url: Optional[str] = None,
-    aws_access_key_id: Optional[str] = None,
-    aws_secret_access_key: Optional[str] = None,
-    aws_session_token: Optional[str] = None
-) -> None:
+def _load_and_merge(csv_dir: str | Path) -> pd.DataFrame:
     """
-    Converts all CSV files in a directory to a single merged Parquet file.
-
-    Can optionally save to S3/MinIO if `use_s3` is True and bucket credentials are provided.
+    Internal helper to load all CSVs from a directory, extract dataset/region IDs,
+    and merge into a single dataframe with consistent column order.
 
     :param csv_dir: Directory containing CSV files.
-    :type csv_dir: str
-    :param out_path: Optional output path. If None:
-                     - writes to 'merged.parquet' locally
-                     - or 'merged.parquet' in the S3 bucket root if use_s3=True
-    :param use_s3: Whether to write to S3 or MinIO.
-    :type use_s3: bool
-    :param bucket: Name of the S3/MinIO bucket.
-    :type bucket: Optional[str]
-    :param endpoint_url: S3/MinIO endpoint URL.
-    :type endpoint_url: Optional[str]
-    :param aws_access_key_id: S3/MinIO access key ID.
-    :type aws_access_key_id: Optional[str]
-    :param aws_secret_access_key: S3/MinIO secret access key.
-    :type aws_secret_access_key: Optional[str]
-    :param aws_session_token: Optional session token.
-    :type aws_session_token: Optional[str]
-
-    :returns: None
-    :rtype: None
+    :type csv_dir: str | Path
+    :return: Merged dataframe with dataset_name and region_id as first columns.
+    :rtype: pd.DataFrame
     """
-    if not os.path.isdir(csv_dir):
+    csv_dir = Path(csv_dir)
+    if not csv_dir.is_dir():
         raise ValueError(f"Directory does not exist: {csv_dir}")
 
     csv_files = [f for f in os.listdir(csv_dir) if f.endswith(".csv")]
@@ -208,41 +183,105 @@ def to_parquet(
 
     dataframes = []
     for file in csv_files:
-        file_path = os.path.join(csv_dir, file)
+        file_path = csv_dir / file
         try:
-            df = pd.read_csv(file_path)
-            df["__source_file__"] = file  # Optional: trace origin
+            # skip HTML/error CSVs
+            with open(file_path, "r", encoding="utf-8") as f:
+                if f.readline().lstrip().startswith("<"):
+                    warnings.warn(f"Skipping HTML/error file: {file}")
+                    continue
+
+            df = pd.read_csv(file_path, encoding="utf-8")
+
+            # Extract dataset name and region id
+            dataset_match = re.search(r"Dataset_(.+?)_Region_", file)
+            region_match = re.search(r"_Region_(.+?)_START_", file)
+
+            dataset_name = dataset_match.group(1) if dataset_match else "unknown_dataset"
+            region_id = region_match.group(1) if region_match else "unknown_region"
+
+            df.insert(0, "dataset_name", dataset_name)
+            df.insert(1, "region_id", region_id)
+
+            df["__source_file__"] = file  # optional trace
             dataframes.append(df)
+
         except Exception as e:
             warnings.warn(f"Skipping file {file} due to error: {e}")
 
     if not dataframes:
         raise RuntimeError("No valid CSV files could be read.")
 
-    merged_df = pd.concat(dataframes, ignore_index=True)
+    return pd.concat(dataframes, ignore_index=True)
 
-    # Define output path
-    if out_path is None:
-        out_path = "merged.parquet"
+
+def to_parquet(
+    csv_dir: str = ".cache",
+    out_path: str = "merged-data.parquet",
+    use_s3: bool = False,
+    bucket: Optional[str] = None,
+    endpoint_url: Optional[str] = None,
+    aws_access_key_id: Optional[str] = None,
+    aws_secret_access_key: Optional[str] = None,
+    aws_session_token: Optional[str] = None,
+) -> None:
+    """
+    Converts all CSV files in a directory to a single merged Parquet file.
+
+    If `use_s3=True`, the file is stored in the given S3/MinIO bucket.
+
+    :param csv_dir: Directory containing CSV files. Defaults to ".cache".
+    :param out_path: Output path (local or remote). Defaults to "merged-data.parquet".
+    :param use_s3: Whether to save to S3/MinIO.
+    :param bucket: S3/MinIO bucket name.
+    :param endpoint_url: S3/MinIO endpoint URL.
+    :param aws_access_key_id: Access key ID.
+    :param aws_secret_access_key: Secret access key.
+    :param aws_session_token: Optional session token.
+    """
+    merged_df = _load_and_merge(csv_dir)
 
     if use_s3:
         if not all([bucket, endpoint_url, aws_access_key_id, aws_secret_access_key]):
             raise ValueError("Missing S3 credentials or bucket configuration.")
 
-        fs = s3fs.S3FileSystem(
-            key=aws_access_key_id,
-            secret=aws_secret_access_key,
-            token=aws_session_token,
-            client_kwargs={"endpoint_url": endpoint_url}
-        )
+        storage_options = {
+            "key": aws_access_key_id,
+            "secret": aws_secret_access_key,
+            "token": aws_session_token,
+            "client_kwargs": {"endpoint_url": endpoint_url},
+        }
 
-        s3_path = f"{bucket}/{out_path}".lstrip("/")
-        with fs.open(s3_path, "wb") as f:
-            merged_df.to_parquet(f, index=False, engine="pyarrow")
-        print(f"Parquet file saved to S3 at: s3://{s3_path}")
+        s3_path = f"s3://{bucket}/{out_path.lstrip('/')}"
+        merged_df.to_parquet(s3_path, index=False, engine="pyarrow", storage_options=storage_options)
+        print(f"✅ Parquet file saved to S3: {s3_path}")
     else:
-        merged_df.to_parquet(out_path, index=False)
-        print(f"Parquet file saved locally at: {out_path}")
+        merged_df.to_parquet(out_path, index=False, engine="pyarrow")
+        print(f"✅ Parquet file saved locally at: {out_path}")
+
+
+def export_to_csv(csv_dir: Optional[str] = None,
+                  out_path: Optional[str] = None) -> None:
+    """
+    Merge CSV files into a single CSV file with dataset/region columns first.
+
+    :param csv_dir: Directory containing CSV files. Defaults to '.cache'.
+    :type csv_dir: Optional[str]
+    :param out_path: Output CSV file path. Defaults to 'merged.csv'.
+    :type out_path: Optional[str]
+    :return: None
+    :rtype: None
+    """
+    if csv_dir is None:
+        csv_dir = Path(".cache")
+
+    merged_df = _load_and_merge(csv_dir)
+
+    if out_path is None:
+        out_path = "merged.csv"
+
+    merged_df.to_csv(out_path, index=False, encoding="utf-8")
+    print(f"CSV file saved at: {out_path}")
 
 
 if __name__ == "__main__":
@@ -254,11 +293,18 @@ if __name__ == "__main__":
     start_date = date(2015, 1, 1)
     end_date = date(2025, 1, 1)
 
-    harvest_for_assessment(start_date=start_date,
-                           end_date=end_date)
+    # harvest_for_assessment(start_date=start_date,
+    #                        end_date=end_date)
+
+    export_to_csv(
+        csv_dir=".cache",
+        out_path="C:/Users/willem.boone/Downloads/merged_PLET.csv"
+    )
+
+    # Export merged Parquet directly to MinIO/S3
     # to_parquet(
-    #     csv_dir=out_dir,
-    #     out_path="merged-data.parquet",
+    #     csv_dir=".cache",
+    #     out_path="data/merged-data3.parquet",
     #     use_s3=True,
     #     bucket=config.settings.bucket,
     #     endpoint_url=config.settings.endpoint_url,
