@@ -100,7 +100,7 @@ class PLETHarvester:
             if not geom.is_valid:
                 raise ValueError("Provided WKT geometry is invalid")
         except Exception as e:
-            raise ValueError(f"Invalid WKT format: {e}")
+            raise ValueError(f"Invalid WKT format: {e}, WKT: {wkt}")
 
         params = {
             "startdate": start_date.strftime("%Y-%m-%d"),
@@ -224,7 +224,7 @@ class PLETHarvester:
             for row in reader:
                 writer.writerow(row)
 
-        print(f"CSV written to {output_file}")
+        # print(f"CSV written to {output_file}")
 
 
 if __name__ == "__main__":

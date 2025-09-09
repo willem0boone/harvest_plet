@@ -1,17 +1,22 @@
 import os
 import requests
+from shapely import wkt
 from typing import List
 from typing import Optional
 from staticmap import Polygon
 from staticmap import StaticMap
 import matplotlib.pyplot as plt
 from shapely.geometry import shape
+from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon
 from shapely.geometry.base import BaseGeometry
 
 
 class OSPARRegions:
     """
     A class for fetching and handling OSPAR WFS component data.
+    Description of data: https://odims.ospar.org/en/submissions/ospar_comp_au_2023_01/
+    json url: https://odims.ospar.org/geoserver/odims/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=ospar_comp_au_2023_01_001&outputFormat=application/json
     """
 
     def __init__(self) -> None:
@@ -58,17 +63,33 @@ class OSPARRegions:
         :returns: The WKT string of the geometry, or None if not found.
         :rtype: Optional[str]
         """
-        geometry = self._get_geometry(id)
-        if not geometry:
+        geometry: BaseGeometry = self._get_geometry(id)
+        if geometry is None:
             return None
 
         if simplify:
             tolerance = 0.001
-            simplified = geometry.simplify(tolerance, preserve_topology=True)
-            while len(simplified.wkt) > 5000 and tolerance < 1.0:
+            simplified = geometry
+
+            while True:
+                simplified = simplified.simplify(tolerance,
+                                                 preserve_topology=True)
+                simplified = simplified.buffer(0)  # fix minor invalidities
+
+                # Convert single MultiPolygon to Polygon
+                if isinstance(simplified, MultiPolygon) and len(
+                        simplified.geoms) == 1:
+                    simplified = simplified.geoms[0]
+
+                # Optionally round coordinates to reduce WKT length
+                simplified = wkt.loads(
+                    wkt.dumps(simplified, rounding_precision=5))
+
+                if len(simplified.wkt) <= 5000 or tolerance >= 1.0:
+                    break
+
                 tolerance *= 2
-                simplified = geometry.simplify(tolerance,
-                                               preserve_topology=True)
+
             geometry = simplified
 
         return geometry.wkt
@@ -174,12 +195,15 @@ class OSPARRegions:
             plt.show()
 
 
-# if __name__ == "__main__":
-#     comp_regions = OSPARRegions()
-#     comp_regions.plot_map("SNS")
-#     id_list = comp_regions.get_all_ids()
-#     for item in id_list:
-#         print(item)
+if __name__ == "__main__":
+    comp_regions = OSPARRegions()
+    print(comp_regions.get_wkt("NAAP2", simplify=False))
+    print('-----')
+    print(comp_regions.get_wkt("NAAP2", simplify=True))
+    comp_regions.plot_map("NAAC3")
+    # id_list = comp_regions.get_all_ids()
+    # for item in id_list:
+    #     print(item)
 
 
 
